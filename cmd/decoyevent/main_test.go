@@ -123,6 +123,28 @@ func TestCLIPostsWebhook(t *testing.T) {
 	}
 }
 
+func TestNDJSONStream(t *testing.T) {
+	line := func(id string) string {
+		return `{"id":"` + id + `","time":"2026-11-02T16:00:00Z","src_ip":"203.0.113.10","dst_port":22,"protocol":"ssh","action":"login"}`
+	}
+	input := line("lab-ssh-1") + "\n\nnot-json\n" + line("lab-ssh-1") + "\n" + line("lab-ssh-2") + "\n"
+	var out, errw bytes.Buffer
+	code := run([]string{"cef", "--ndjson", "--state", t.TempDir() + "/state.db"}, strings.NewReader(input), &out, &errw, "")
+	if code != 2 {
+		t.Fatalf("exit %d stderr %s", code, errw.String())
+	}
+	if !strings.Contains(errw.String(), "line 3:") {
+		t.Fatalf("stderr %s", errw.String())
+	}
+	got := out.String()
+	if !strings.Contains(got, "cnt=1 outcome=accepted") || !strings.Contains(got, "cnt=2 outcome=duplicate") || !strings.Contains(got, "cs2=lab-ssh-2") {
+		t.Fatal(got)
+	}
+	if strings.Count(got, "\n") != 3 {
+		t.Fatalf("events %d\n%s", strings.Count(got, "\n"), got)
+	}
+}
+
 type ioDiscard struct{}
 
 func (ioDiscard) Write(p []byte) (int, error) { return len(p), nil }

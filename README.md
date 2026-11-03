@@ -1,4 +1,36 @@
-decoyevent reads one decoy interaction from stdin and writes a signed JSON body, a CEF line, or a STIX 2.1 indicator.
+decoyevent reads decoy interactions from stdin and writes a signed JSON body, a CEF line, or a STIX 2.1 indicator. One invocation reads a single JSON object, or with `--ndjson` one object per line.
+
+## Pipeline
+
+```mermaid
+flowchart TD
+  stdin["stdin"] --> mode{"--ndjson"}
+  mode -->|"one JSON object"| validate["validate the object"]
+  mode -->|"one object per line"| validate
+  validate -->|"invalid"| fail["stderr, exit 2"]
+  validate --> label["label with ATT&CK 15"]
+  label --> state{"--state"}
+  state -->|"absent"| fresh["accepted, count 1"]
+  state -->|"SQLite"| tx["transaction on the event id"]
+  fresh --> cmd{"command"}
+  tx --> cmd
+  cmd -->|webhook| hook["canonical JSON, HMAC-SHA256"]
+  cmd -->|cef| cef["CEF line"]
+  cmd -->|stix| stix["STIX 2.1 indicator"]
+  hook --> ship["--post when set, then stdout"]
+  stix --> ship
+  cef --> wire["--syslog when set, then stdout"]
+  ship -->|"ok and --state"| commit["commit count, first, last"]
+  wire -->|"ok and --state"| commit
+  ship -->|"ok, no database"| done["exit 0"]
+  wire -->|"ok, no database"| done
+  commit --> done
+  ship -->|"delivery failed"| rollback["roll back the sighting"]
+  wire -->|"delivery failed"| rollback
+  rollback --> fail
+```
+
+When `--state` is set, the SQLite transaction stays open until the optional delivery and the stdout write both succeed. `--post` is for `webhook` and `stix`. `--syslog` is for `cef`. With `--ndjson`, a failed line is reported and later lines still run; the process exits 2 after the stream ends.
 
 ## Install
 
@@ -10,7 +42,7 @@ From this repository, `go run ./cmd/decoyevent` does the same job.
 
 ## Usage
 
-Each invocation reads one JSON object. A second object on stdin is rejected, so a sensor calls decoyevent once per touch.
+Without `--ndjson`, stdin is one JSON object and a second object is rejected. With `--ndjson`, each line is one object.
 
 The signature function is tested against these exact bytes and the key `lab-secret`. The body has no trailing newline. The signature is `a2abe963152952a171b5acd0c8bbdadc18711484b10ef534ce97b467c4330b1b`.
 
@@ -32,6 +64,12 @@ decoyevent stix --post https://collector.example/indicators < testdata/login.jso
 ```
 
 The body is still written to stdout. `--post` and `--syslog` deliver the same bytes to another system. `--post` requires `DECOYEVENT_SECRET` and sends `X-Decoyevent-Signature`. A redirect is treated as a failure. `--syslog` takes `udp://host:port` or `tcp://host:port` and wraps the CEF line in an RFC 3164 message, facility `local0`. Syslog has no signature header. `--syslog` is only valid with `cef`.
+
+`--ndjson` reads stdin until it ends and treats each line as one JSON object. Empty lines are skipped. A line that fails validation or delivery is written to stderr as `line N: …`, and the following lines are still delivered. The process exits 2 when any line failed or the scanner reports an error. Webhook lines gain a trailing newline on stdout so the stream stays one object per line. The signature covers the object without that newline.
+
+```text
+decoyevent cef --ndjson --state /tmp/decoyevent.db --syslog udp://10.0.0.5:514 < olaylar.ndjson
+```
 
 Count repeats in a SQLite database. The second run of the same id prints `cnt=2` and `outcome=duplicate`.
 

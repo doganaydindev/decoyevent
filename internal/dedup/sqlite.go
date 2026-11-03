@@ -11,9 +11,15 @@ import (
 	_ "modernc.org/sqlite"
 )
 
-// Apply records id in the SQLite database at path and then calls after.
-// The write lock is held across after. If after returns an error, the sighting is not saved.
-func Apply(path, id string, window time.Duration, clock Clock, after func(Result) error) (Result, error) {
+// DB is an open sightings database. One stream should keep one DB.
+type DB struct {
+	db     *sql.DB
+	window time.Duration
+	clock  Clock
+}
+
+// Open creates the database at path. A non-positive window becomes 24 hours.
+func Open(path string, window time.Duration, clock Clock) (*DB, error) {
 	if clock == nil {
 		clock = systemClock{}
 	}
@@ -22,17 +28,24 @@ func Apply(path, id string, window time.Duration, clock Clock, after func(Result
 	}
 	db, err := open(path)
 	if err != nil {
-		return Result{}, err
+		return nil, err
 	}
-	defer db.Close()
+	return &DB{db: db, window: window, clock: clock}, nil
+}
 
-	tx, err := db.Begin()
+// Close closes the database.
+func (d *DB) Close() error { return d.db.Close() }
+
+// Apply records id and calls after while holding the write lock.
+// If after returns an error, the sighting is not saved.
+func (d *DB) Apply(id string, after func(Result) error) (Result, error) {
+	tx, err := d.db.Begin()
 	if err != nil {
 		return Result{}, err
 	}
 	defer tx.Rollback()
 
-	res, err := observeTx(tx, id, window, clock.Now().UTC())
+	res, err := observeTx(tx, id, d.window, d.clock.Now().UTC())
 	if err != nil {
 		return Result{}, err
 	}
@@ -45,6 +58,16 @@ func Apply(path, id string, window time.Duration, clock Clock, after func(Result
 		return Result{}, err
 	}
 	return res, nil
+}
+
+// Apply opens path, records id, calls after, and closes the database.
+func Apply(path, id string, window time.Duration, clock Clock, after func(Result) error) (Result, error) {
+	db, err := Open(path, window, clock)
+	if err != nil {
+		return Result{}, err
+	}
+	defer db.Close()
+	return db.Apply(id, after)
 }
 
 func open(path string) (*sql.DB, error) {
