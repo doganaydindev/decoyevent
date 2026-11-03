@@ -108,15 +108,36 @@ A field outside this list is rejected. The keys `password`, `pass`, `passwd`, `s
 
 The table is ATT&CK 15 and only the rows below. An unknown pair is left unlabeled. It is not mapped to a nearby technique. `attack_version` is the string `15`.
 
+A login against a credential service is T1110. An established session uses the matching T1021 sub-technique. `rdp/login` and `rdp/session` stay T1021.001. `sip/invite` stays unlabeled.
+
 | Protocol | Action | Technique |
 |---|---|---|
 | tcp | scan | T1046 |
+| udp | scan | T1046 |
 | ssh | login | T1110 |
 | ftp | login | T1110 |
+| telnet | login | T1110 |
+| smtp | login | T1110 |
+| imap | login | T1110 |
+| pop3 | login | T1110 |
 | mysql | login | T1110 |
+| mssql | login | T1110 |
+| postgres | login | T1110 |
+| mongodb | login | T1110 |
+| redis | login | T1110 |
+| ldap | login | T1110 |
+| smb | login | T1110 |
+| vnc | login | T1110 |
 | rdp | login | T1021.001 |
+| rdp | session | T1021.001 |
+| smb | session | T1021.002 |
 | ssh | session | T1021.004 |
+| vnc | session | T1021.005 |
+| winrm | session | T1021.006 |
 | http | request | T1071.001 |
+| ftp | request | T1071.002 |
+| smtp | request | T1071.003 |
+| dns | request | T1071.004 |
 | http | login | T1078 |
 | token | use | T1078 |
 | token | file | T1005 |
@@ -124,8 +145,8 @@ The table is ATT&CK 15 and only the rows below. An unknown pair is left unlabele
 | Technique | CEF severity | STIX confidence |
 |---|---|---|
 | none | 3 | 40 |
-| T1046, T1071.001 | 5 | 60 |
-| T1110, T1021.001, T1021.004 | 8 | 75 |
+| T1046, T1071.001, T1071.002, T1071.003, T1071.004 | 5 | 60 |
+| T1110, T1021.001, T1021.002, T1021.004, T1021.005, T1021.006 | 8 | 75 |
 | T1078, T1005 | 9 | 90 |
 
 STIX output is one `indicator` object. The indicator id is a UUID version 5 of `decoyevent|` plus the event id, under the namespace `a3b0c1d2-e3f4-4516-87a9-b0c1d2e3f405`. That namespace is a project constant, not an IANA registration. The same event id always yields the same indicator id.
