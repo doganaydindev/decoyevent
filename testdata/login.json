@@ -1,0 +1,11 @@
+{
+  "id": "lab-ssh-1",
+  "time": "2026-11-02T16:00:00Z",
+  "sensor": "lab-1",
+  "src_ip": "203.0.113.10",
+  "dst_ip": "192.0.2.5",
+  "dst_port": 22,
+  "protocol": "ssh",
+  "action": "login",
+  "decoy": "bastion"
+}

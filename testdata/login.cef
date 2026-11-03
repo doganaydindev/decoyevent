@@ -1,0 +1,1 @@
+CEF:0|Decoyevent|decoyevent|1.0|T1110|ssh login|8|src=203.0.113.10 dst=192.0.2.5 dpt=22 proto=ssh act=login dvchost=lab-1 cs1Label=decoy cs1=bastion cs2Label=eventId cs2=lab-ssh-1 cs3Label=attack cs3=15 cnt=1 outcome=accepted

@@ -1,0 +1,4 @@
+/decoyevent
+*.db
+*.db-wal
+*.db-shm

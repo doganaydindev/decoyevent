@@ -1,0 +1,15 @@
+{
+  "type": "indicator",
+  "spec_version": "2.1",
+  "id": "indicator--68733f5b-d39b-53da-9953-548ec518b586",
+  "created": "2026-11-02T16:00:00Z",
+  "modified": "2026-11-02T16:00:00Z",
+  "name": "ssh login via decoyevent",
+  "pattern": "[ipv4-addr:value = '203.0.113.10']",
+  "pattern_type": "stix",
+  "valid_from": "2026-11-02T16:00:00Z",
+  "indicator_types": [
+    "malicious-activity"
+  ],
+  "confidence": 75
+}
